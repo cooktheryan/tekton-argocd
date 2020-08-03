@@ -1,0 +1,23 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: peer-clusters
+spec:
+  params:
+    - name: cluster1
+      description: peer cluster1
+    - name: cluster2
+      description: peer cluster2
+  steps:
+    - name: peer-clusters
+      image: quay.io/rcook/tools:awsv1
+      imagePullPolicy: Always
+      command: ["/bin/sh","-c"]
+      args: ["kubectl get secret `kubectl get cd '$(inputs.params.cluster1)' --template={{.spec.clusterMetadata.adminKubeconfigSecretRef.name}}` --template={{.data.kubeconfig}} | base64 --decode > /tmp/'$(inputs.params.cluster1)' ; kubectl get secret `kubectl get cd '$(inputs.params.cluster2)' --template={{.spec.clusterMetadata.adminKubeconfigSecretRef.name}}` --template={{.data.kubeconfig}} | base64 --decode > /tmp/'$(inputs.params.cluster2)' ; sed -i 's/admin/'$(inputs.params.cluster1)'/g' /tmp/'$(inputs.params.cluster1)' ; sed -i 's/admin/'$(inputs.params.cluster2)'/g' /tmp/'$(inputs.params.cluster2)' ; export KUBECONFIG=/tmp/'$(inputs.params.cluster1)':/tmp/'$(inputs.params.cluster2)' ;  sh /opt/app-root/src/create-peers.sh"]
+      volumeMounts:
+      - name: aws
+        mountPath: /tekton/home/.aws
+  volumes:
+    - name: aws
+      secret:
+        secretName: awsconfig

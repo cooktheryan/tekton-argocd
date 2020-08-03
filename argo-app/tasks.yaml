@@ -1,0 +1,18 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: tasks
+  namespace: argocd
+spec:
+  destination:
+    namespace: tekton
+    server: https://kubernetes.default.svc
+  project: default
+  source:
+    path: tasks 
+    repoURL: https://github.com/cooktheryan/tekton-argocd.git 
+    targetRevision: master
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true

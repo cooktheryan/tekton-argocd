@@ -1,0 +1,20 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: remote-cluster-apply
+spec:
+  resources:
+    inputs:
+      - name: git-source
+        type: git
+  params:
+    - name: cluster
+      description: cluster to apply items 
+    - name: pathToYamlFile
+      description: The path to the yaml file to deploy within the git source
+  steps:
+    - name: remote-cluster-apply
+      image: registry.redhat.io/openshift4/ose-cli:latest
+      imagePullPolicy: Always
+      command: ["/bin/sh","-c"]
+      args: ["kubectl get secret `kubectl get cd '$(inputs.params.cluster)' --template={{.spec.clusterMetadata.adminKubeconfigSecretRef.name}}` --template={{.data.kubeconfig}} | base64 --decode > /tmp/'$(inputs.params.cluster)' ; export KUBECONFIG=/tmp/'$(inputs.params.cluster)' ;  kubectl apply -f /workspace/git-source/$(inputs.params.pathToYamlFile)"]

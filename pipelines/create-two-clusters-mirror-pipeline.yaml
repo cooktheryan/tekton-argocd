@@ -1,0 +1,125 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: create-two-clusters-mirror-pipeline
+spec:
+  params:
+  - description: Cluster to deploy
+    name: pathToYamlFile1
+    type: string
+  - description: Cluster to deploy
+    name: pathToYamlFile2
+    type: string
+  - description: first cluster to peer
+    name: cluster1
+    type: string
+  - description: second cluster to peer
+    name: cluster2
+    type: string
+  - default: rook-ceph-mirroring 
+    description: ocs directory
+    name: pathToYamlFile3
+    type: string
+  resources:
+  - name: git-source
+    type: git
+  tasks:
+  - name: create-cluster1
+    params:
+    - name: pathToYamlFile
+      value: $(params.pathToYamlFile1)
+    resources:
+      inputs:
+      - name: git-source
+        resource: git-source
+    taskRef:
+      kind: Task
+      name: kubectl-create
+  - name: sleep-for-aws-api
+    taskRef:
+      kind: Task
+      name: sleep
+  - name: create-cluster2
+    params:
+    - name: pathToYamlFile
+      value: $(params.pathToYamlFile2)
+    resources:
+      inputs:
+      - name: git-source
+        resource: git-source
+    runAfter:
+    - sleep-for-aws-api
+    taskRef:
+      kind: Task
+      name: kubectl-create
+  - name: cluster-deploy-wait
+    params:
+    - name: cluster
+      value: $(params.cluster2)
+    retries: 3
+    runAfter:
+    - create-cluster1
+    - create-cluster2
+    taskRef:
+      kind: Task
+      name: cd-wait
+  - name: peer-clusters
+    retries: 3
+    params:
+    - name: cluster1
+      value: $(params.cluster1)
+    - name: cluster2
+      value: $(params.cluster2)
+    runAfter:
+    - cluster-deploy-wait
+    taskRef:
+      kind: Task
+      name: peer-clusters
+  - name: deploy-ocs
+    params:
+    - name: pathToYamlFile
+      value: $(params.pathToYamlFile3)
+    - name: cluster
+      value: $(params.cluster1)
+    resources:
+      inputs:
+      - name: git-source
+        resource: git-source
+    retries: 3
+    runAfter:
+    - peer-clusters
+    taskRef:
+      kind: Task
+      name: remote-cluster-apply
+  - name: cluster2-deploy-ocs
+    params:
+    - name: pathToYamlFile
+      value: $(params.pathToYamlFile3)
+    - name: cluster
+      value: $(params.cluster2)
+    resources:
+      inputs:
+      - name: git-source
+        resource: git-source
+    retries: 3
+    runAfter:
+    - peer-clusters
+    taskRef:
+      kind: Task
+      name: remote-cluster-apply
+  - name: label-nodes-cluster1
+    taskRef:
+      name: label-nodes
+    runAfter:
+    - peer-clusters
+    params:
+      - name: cluster
+        value:  "$(params.cluster1)"
+  - name: label-nodes-cluster2
+    taskRef:
+      name: label-nodes
+    runAfter:
+    - peer-clusters
+    params:
+      - name: cluster
+        value:  "$(params.cluster2)"

@@ -1,0 +1,14 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: label-nodes 
+spec:
+  params:
+    - name: cluster
+      description: cluster to apply items 
+  steps:
+    - name: label-nodes
+      image: registry.redhat.io/openshift4/ose-cli:latest
+      imagePullPolicy: Always
+      command: ["/bin/sh","-c"]
+      args: ["kubectl get secret `kubectl get cd '$(inputs.params.cluster)' --template={{.spec.clusterMetadata.adminKubeconfigSecretRef.name}}` --template={{.data.kubeconfig}} | base64 --decode > /tmp/'$(inputs.params.cluster)' ; export KUBECONFIG=/tmp/'$(inputs.params.cluster)' ; for i in `kubectl get nodes | grep worker | awk '{print $1}'`; do oc label nodes $i cluster.ocs.openshift.io/openshift-storage='';done "]

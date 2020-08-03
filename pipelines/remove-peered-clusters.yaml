@@ -1,0 +1,52 @@
+apiVersion: tekton.dev/v1alpha1
+kind: Pipeline
+metadata:
+  name: remove-peered-clusters-pipeline
+spec:
+  resources:
+   - name: git-source
+     type: git
+  params:
+    - name: cluster1
+      description: Cluster to remove
+    - name: cluster2
+      description: Cluster to remove
+    - name: pathToYamlFile1
+      description: Cluster to deploy
+    - name: pathToYamlFile2
+      description: Cluster to deploy
+  tasks:
+  - name: remove-peer
+    taskRef: 
+      name: remove-cluster-peer
+    params:
+      - name: cluster1
+        value:  "$(params.cluster1)"
+      - name: cluster2
+        value:  "$(params.cluster2)"
+
+  - name: destroy-cluster1
+    taskRef:
+      name: kubectl-delete
+    runAfter:
+      - remove-peer
+    params:
+      - name: pathToYamlFile
+        value: "$(params.pathToYamlFile1)"
+    resources:
+      inputs:
+        - name: git-source
+          resource: git-source
+
+  - name: destroy-cluster2
+    taskRef:
+      name: kubectl-delete 
+    runAfter:
+      - remove-peer
+    params:
+      - name: pathToYamlFile
+        value: "$(params.pathToYamlFile2)"
+    resources:
+      inputs:
+        - name: git-source
+          resource: git-source

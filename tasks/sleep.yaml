@@ -1,0 +1,15 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: sleep 
+spec:
+  params:
+    - name: sleep-length 
+      description: Amount of time to wait
+      default: 10m
+  steps:
+    - name: sleep
+      image: registry.redhat.io/openshift4/ose-cli:latest 
+      command: ["sleep"]
+      args:
+        - '$(inputs.params.sleep-length)'

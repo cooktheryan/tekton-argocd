@@ -1,0 +1,21 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: aws-sg
+spec:
+  params:
+    - name: cluster
+      description: open port to cluster
+  steps:
+    - name: aws-sg
+      image: quay.io/rcook/tools:awsv1
+      imagePullPolicy: Always
+      command: ["/bin/sh","-c"]
+      args: ["kubectl get secret `kubectl get cd '$(inputs.params.cluster)' --template={{.spec.clusterMetadata.adminKubeconfigSecretRef.name}}` --template={{.data.kubeconfig}} | base64 --decode > /tmp/'$(inputs.params.cluster)' ; sed -i 's/admin/'$(inputs.params.cluster)'/g' /tmp/'$(inputs.params.cluster)' ; export KUBECONFIG=/tmp/'$(inputs.params.cluster)' ;  sh /opt/app-root/src/security-group.sh"]
+      volumeMounts:
+      - name: aws
+        mountPath: /tekton/home/.aws
+  volumes:
+    - name: aws
+      secret:
+        secretName: awsconfig

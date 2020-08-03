@@ -1,0 +1,20 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: kustomize
+spec:
+  resources:
+    inputs:
+      - name: git-source
+        type: git
+  params:
+    - name: pathToYamlFile
+      description: The path to the yaml file to deploy within the git source
+  steps:
+    - name: run-kubectl
+      image: registry.redhat.io/openshift4/ose-cli:latest 
+      command: ["kubectl"]
+      args:
+        - "apply"
+        - "-k"
+        - "/workspace/git-source/$(inputs.params.pathToYamlFile)"

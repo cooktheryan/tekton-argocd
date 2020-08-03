@@ -1,0 +1,19 @@
+apiVersion: tekton.dev/v1beta1
+kind: Task
+metadata:
+  name: cd-wait
+spec:
+  params:
+  - description: cluster to apply items
+    name: cluster
+    type: string
+  steps:
+  - args:
+    - while [ $(oc get cd '$(inputs.params.cluster)' --template={{.spec.installed}})
+      != "true" ]; do sleep 10; done
+    command:
+    - /bin/sh
+    - -c
+    image: registry.redhat.io/openshift4/ose-cli:latest
+    name: wait-for-cluster
+    resources: {}
