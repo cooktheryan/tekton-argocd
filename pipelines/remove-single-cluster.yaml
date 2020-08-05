@@ -1,0 +1,24 @@
+apiVersion: tekton.dev/v1alpha1
+kind: Pipeline
+metadata:
+  name: remove-single-cluster-pipeline
+spec:
+  resources:
+   - name: git-source
+     type: git
+  params:
+    - name: cluster1
+      description: Cluster to remove
+    - name: pathToYamlFile1
+      description: Cluster to deploy
+  tasks:
+  - name: destroy-cluster1
+    taskRef:
+      name: kubectl-delete
+    params:
+      - name: pathToYamlFile
+        value: "$(params.pathToYamlFile1)"
+    resources:
+      inputs:
+        - name: git-source
+          resource: git-source

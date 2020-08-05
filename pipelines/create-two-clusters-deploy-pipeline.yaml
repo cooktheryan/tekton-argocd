@@ -1,7 +1,7 @@
 apiVersion: tekton.dev/v1beta1
 kind: Pipeline
 metadata:
-  name: create-two-clusters-mirror-pipeline
+  name: create-two-clusters-deploy-object-pipeline
 spec:
   params:
   - description: Cluster to deploy
@@ -16,8 +16,7 @@ spec:
   - description: second cluster to peer
     name: cluster2
     type: string
-  - default: rook-ceph-mirroring 
-    description: ocs directory
+  - description: directory to deploy
     name: pathToYamlFile3
     type: string
   resources:
@@ -75,7 +74,7 @@ spec:
     taskRef:
       kind: Task
       name: peer-clusters
-  - name: deploy-ocs
+  - name: deploy-object
     params:
     - name: pathToYamlFile
       value: $(params.pathToYamlFile3)
@@ -91,7 +90,7 @@ spec:
     taskRef:
       kind: Task
       name: remote-cluster-apply
-  - name: cluster2-deploy-ocs
+  - name: cluster2-deploy-object
     params:
     - name: pathToYamlFile
       value: $(params.pathToYamlFile3)
@@ -107,19 +106,3 @@ spec:
     taskRef:
       kind: Task
       name: remote-cluster-apply
-  - name: label-nodes-cluster1
-    taskRef:
-      name: label-nodes
-    runAfter:
-    - peer-clusters
-    params:
-      - name: cluster
-        value:  "$(params.cluster1)"
-  - name: label-nodes-cluster2
-    taskRef:
-      name: label-nodes
-    runAfter:
-    - peer-clusters
-    params:
-      - name: cluster
-        value:  "$(params.cluster2)"

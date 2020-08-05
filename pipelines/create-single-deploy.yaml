@@ -1,0 +1,66 @@
+apiVersion: tekton.dev/v1beta1
+kind: Pipeline
+metadata:
+  name: create-single-cluster-pipeline
+spec:
+  params:
+  - description: Cluster to deploy
+    name: pathToYamlFile1
+    type: string
+  - description: cluster to open ports 
+    name: cluster
+    type: string
+  - description: directory to deploy
+    name: pathToYamlFile2
+    type: string
+  resources:
+  - name: git-source
+    type: git
+  tasks:
+  - name: create-cluster
+    params:
+    - name: pathToYamlFile
+      value: $(params.pathToYamlFile1)
+    resources:
+      inputs:
+      - name: git-source
+        resource: git-source
+    taskRef:
+      kind: Task
+      name: kubectl-create
+  - name: cluster-deploy-wait
+    params:
+    - name: cluster
+      value: $(params.cluster)
+    retries: 3
+    runAfter:
+    - create-cluster
+    taskRef:
+      kind: Task
+      name: cd-wait
+  - name: aws-sg 
+    retries: 3
+    params:
+    - name: cluster
+      value: $(params.cluster)
+    runAfter:
+    - cluster-deploy-wait
+    taskRef:
+      kind: Task
+      name: aws-sg
+  - name: remote-deploy
+    params:
+    - name: pathToYamlFile
+      value: $(params.pathToYamlFile2)
+    - name: cluster
+      value: $(params.cluster)
+    resources:
+      inputs:
+      - name: git-source
+        resource: git-source
+    retries: 3
+    runAfter:
+    - aws-sg
+    taskRef:
+      kind: Task
+      name: remote-cluster-apply
